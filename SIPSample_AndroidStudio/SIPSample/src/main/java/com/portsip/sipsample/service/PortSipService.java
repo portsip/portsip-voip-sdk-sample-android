@@ -31,6 +31,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.preference.PreferenceManager;
@@ -93,7 +94,7 @@ public class PortSipService extends Service implements OnPortSIPEvent, NetWorkRe
     private String pushToken;
     private NotificationManager mNotificationManager;
     private NetWorkReceiver mNetWorkReceiver;
-
+    private Handler handler = new Handler();
     @Override
     public void onCreate() {
         super.onCreate();
@@ -203,6 +204,7 @@ public class PortSipService extends Service implements OnPortSIPEvent, NetWorkRe
         if (intent != null) {
             if (ACTION_PUSH_MESSAGE.equals(intent.getAction())||ACTION_SIP_REGIEST.equals(intent.getAction())){
                 CallManager.Instance().online = true;
+				handler.removeCallbacks(suicide);
                 if(CallManager.Instance().regist){
                     mEngine.refreshRegistration(0);
                 }else {
@@ -211,18 +213,26 @@ public class PortSipService extends Service implements OnPortSIPEvent, NetWorkRe
             } else if (ACTION_SIP_UNREGIEST.equals(intent.getAction())) {
                 CallManager.Instance().online = false;
                 unregisterToServer();
+				handler.postDelayed(suicide,2000);
             }else if (ACTION_SIP_REINIT.equals(intent.getAction())) {
                 CallManager.Instance().hangupAllCalls(mEngine);
                 initialSDK();
             }else if (ACTION_PUSH_TOKEN.equals(intent.getAction())) {
                 pushToken = intent.getStringExtra(EXTRA_PUSHTOKEN);
-
+				handler.removeCallbacks(suicide);
                 refreshPushToken();
             }
 
         }
         return result;
     }
+
+    Runnable suicide = new Runnable() {
+        @Override
+        public void run() {
+            stopSelf();
+        }
+    };
 
     private void refreshPushToken(){
         if (!TextUtils.isEmpty(pushToken))
