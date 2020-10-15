@@ -3,6 +3,7 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.iid.InstanceIdResult;
+import com.portsip.OnAudioManagerEvents;
 import com.portsip.PortSipEnumDefine;
 import com.portsip.PortSipErrorcode;
 import com.portsip.PortSipSdk;
@@ -12,6 +13,7 @@ import com.portsip.R;
 import com.portsip.sipsample.ui.IncomingActivity;
 import com.portsip.sipsample.ui.MainActivity;
 import com.portsip.sipsample.ui.MyApplication;
+import com.portsip.sipsample.adapter.AudioDeviceAdapter;
 import com.portsip.sipsample.util.CallManager;
 import com.portsip.sipsample.util.Contact;
 import com.portsip.sipsample.util.ContactManager;
@@ -31,7 +33,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Build;
-import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.preference.PreferenceManager;
@@ -50,10 +51,12 @@ import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 
 
-public class PortSipService extends Service implements OnPortSIPEvent, NetWorkReceiver.NetWorkListener {
+public class PortSipService extends Service implements OnPortSIPEvent, NetWorkReceiver.NetWorkListener, OnAudioManagerEvents {
     public static final String ACTION_SIP_REGIEST = "PortSip.AndroidSample.Test.REGIEST";
     public static final String ACTION_SIP_UNREGIEST = "PortSip.AndroidSample.Test.UNREGIEST";
     public static final String ACTION_SIP_REINIT = "PortSip.AndroidSample.Test.TrnsType";
+
+    public static final String ACTION_SIP_AUDIODEVICE = "PortSip.AndroidSample.Test.AudioDeviceUpdate";
 
     public static final String ACTION_PUSH_MESSAGE = "PortSip.AndroidSample.Test.PushMessageIncoming";
     public static final String ACTION_PUSH_TOKEN = "PortSip.AndroidSample.Test.PushToken";
@@ -94,7 +97,7 @@ public class PortSipService extends Service implements OnPortSIPEvent, NetWorkRe
     private String pushToken;
     private NotificationManager mNotificationManager;
     private NetWorkReceiver mNetWorkReceiver;
-    private Handler handler = new Handler();
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -165,6 +168,17 @@ public class PortSipService extends Service implements OnPortSIPEvent, NetWorkRe
         mEngine.setInstanceId(getInstanceID());
     }
 
+    @Override
+    public void onAudioDeviceChanged(PortSipEnumDefine.AudioDevice audioDevice, Set<PortSipEnumDefine.AudioDevice> set) {
+
+        AudioDeviceAdapter.setSelectalbeAudioDevice(audioDevice,  set);
+
+        Intent intent = new Intent();
+        intent.setAction(ACTION_SIP_AUDIODEVICE);
+        sendBroadcast(intent);
+
+    }
+
     private void showServiceNotifiCation(){
         Intent intent = new Intent(this, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -204,7 +218,6 @@ public class PortSipService extends Service implements OnPortSIPEvent, NetWorkRe
         if (intent != null) {
             if (ACTION_PUSH_MESSAGE.equals(intent.getAction())||ACTION_SIP_REGIEST.equals(intent.getAction())){
                 CallManager.Instance().online = true;
-				handler.removeCallbacks(suicide);
                 if(CallManager.Instance().regist){
                     mEngine.refreshRegistration(0);
                 }else {
@@ -213,26 +226,18 @@ public class PortSipService extends Service implements OnPortSIPEvent, NetWorkRe
             } else if (ACTION_SIP_UNREGIEST.equals(intent.getAction())) {
                 CallManager.Instance().online = false;
                 unregisterToServer();
-				handler.postDelayed(suicide,2000);
             }else if (ACTION_SIP_REINIT.equals(intent.getAction())) {
                 CallManager.Instance().hangupAllCalls(mEngine);
                 initialSDK();
             }else if (ACTION_PUSH_TOKEN.equals(intent.getAction())) {
                 pushToken = intent.getStringExtra(EXTRA_PUSHTOKEN);
-				handler.removeCallbacks(suicide);
+
                 refreshPushToken();
             }
 
         }
         return result;
     }
-
-    Runnable suicide = new Runnable() {
-        @Override
-        public void run() {
-            stopSelf();
-        }
-    };
 
     private void refreshPushToken(){
         if (!TextUtils.isEmpty(pushToken))
@@ -322,6 +327,7 @@ public class PortSipService extends Service implements OnPortSIPEvent, NetWorkRe
         }
 
         mEngine.setAudioDevice(PortSipEnumDefine.AudioDevice.SPEAKER_PHONE);
+        mEngine.setAudioManagerEvents(this::onAudioDeviceChanged);
         mEngine.setVideoDeviceId(1);
 
         mEngine.setSrtpPolicy(srtpType);
