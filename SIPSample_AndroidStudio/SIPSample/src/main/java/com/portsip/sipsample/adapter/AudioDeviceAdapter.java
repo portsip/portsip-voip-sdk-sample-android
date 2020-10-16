@@ -18,19 +18,16 @@ import androidx.annotation.Nullable;
 
 public class AudioDeviceAdapter extends ArrayAdapter
 {
-    static List<PortSipEnumDefine.AudioDevice> audioDeviceList = new ArrayList<>();
+    static List<PortSipEnumDefine.AudioDevice> audioDeviceList = new ArrayList(){
+        {add(PortSipEnumDefine.AudioDevice.EARPIECE);
+        add(PortSipEnumDefine.AudioDevice.SPEAKER_PHONE);
+        add(PortSipEnumDefine.AudioDevice.BLUETOOTH);
+        add(PortSipEnumDefine.AudioDevice.WIRED_HEADSET);}};
     static List<PortSipEnumDefine.AudioDevice> audioDeviceAvailable = new ArrayList<>();
     static int select =0;
+
     public AudioDeviceAdapter(@NonNull Context context) {
         super(context, R.layout.audio_device,audioDeviceList);
-        audioDeviceList.add(PortSipEnumDefine.AudioDevice.EARPIECE);
-        audioDeviceList.add(PortSipEnumDefine.AudioDevice.SPEAKER_PHONE);
-        audioDeviceList.add(PortSipEnumDefine.AudioDevice.BLUETOOTH);
-        audioDeviceList.add(PortSipEnumDefine.AudioDevice.WIRED_HEADSET);
-
-        //default selectable
-        //audioDeviceAvailable.add(PortSipEnumDefine.AudioDevice.EARPIECE);
-        //audioDeviceAvailable.add(PortSipEnumDefine.AudioDevice.SPEAKER_PHONE);
     }
 
     public static int getCurrentDevice(){
