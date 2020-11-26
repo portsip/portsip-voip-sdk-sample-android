@@ -13,7 +13,6 @@ import com.portsip.R;
 import com.portsip.sipsample.ui.IncomingActivity;
 import com.portsip.sipsample.ui.MainActivity;
 import com.portsip.sipsample.ui.MyApplication;
-import com.portsip.sipsample.adapter.AudioDeviceAdapter;
 import com.portsip.sipsample.util.CallManager;
 import com.portsip.sipsample.util.Contact;
 import com.portsip.sipsample.util.ContactManager;
@@ -51,7 +50,7 @@ import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 
 
-public class PortSipService extends Service implements OnPortSIPEvent, NetWorkReceiver.NetWorkListener, OnAudioManagerEvents {
+public class PortSipService extends Service implements OnPortSIPEvent, NetWorkReceiver.NetWorkListener,OnAudioManagerEvents {
     public static final String ACTION_SIP_REGIEST = "PortSip.AndroidSample.Test.REGIEST";
     public static final String ACTION_SIP_UNREGIEST = "PortSip.AndroidSample.Test.UNREGIEST";
     public static final String ACTION_SIP_REINIT = "PortSip.AndroidSample.Test.TrnsType";
@@ -171,7 +170,7 @@ public class PortSipService extends Service implements OnPortSIPEvent, NetWorkRe
     @Override
     public void onAudioDeviceChanged(PortSipEnumDefine.AudioDevice audioDevice, Set<PortSipEnumDefine.AudioDevice> set) {
 
-        AudioDeviceAdapter.setSelectalbeAudioDevice(audioDevice,  set);
+        CallManager.Instance().setSelectalbeAudioDevice(audioDevice,  set);
 
         Intent intent = new Intent();
         intent.setAction(ACTION_SIP_AUDIODEVICE);
@@ -326,8 +325,9 @@ public class PortSipService extends Service implements OnPortSIPEvent, NetWorkRe
             return;
         }
 
+        mEngine.enableAudioManager(true,this::onAudioDeviceChanged);
+
         mEngine.setAudioDevice(PortSipEnumDefine.AudioDevice.SPEAKER_PHONE);
-        mEngine.setAudioManagerEvents(this::onAudioDeviceChanged);
         mEngine.setVideoDeviceId(1);
 
         mEngine.setSrtpPolicy(srtpType);
@@ -414,6 +414,8 @@ public class PortSipService extends Service implements OnPortSIPEvent, NetWorkRe
         if (preferences.getBoolean(context.getString(R.string.MEDIA_VP9), true)) {
             sdk.addVideoCodec(PortSipEnumDefine.ENUM_VIDEOCODEC_VP9);
         }
+
+        sdk.setVideoNackStatus(preferences.getBoolean(context.getString(R.string.VIDEO_NACK), true));
 
 		sdk.enableAEC(preferences.getBoolean(context.getString(R.string.MEDIA_AEC), true));
         sdk.enableAGC(preferences.getBoolean(context.getString(R.string.MEDIA_AGC), true));
@@ -684,11 +686,6 @@ public class PortSipService extends Service implements OnPortSIPEvent, NetWorkRe
             broadIntent.putExtra(EXTRA_CALL_DESCRIPTION, description);
 
             sendPortSipMessage(description, broadIntent);
-        }
-        if(applicaton.mEngine.getAudioDevices().contains(PortSipEnumDefine.AudioDevice.BLUETOOTH)){
-            applicaton.mEngine.setAudioDevice(PortSipEnumDefine.AudioDevice.BLUETOOTH);
-        }else {
-            CallManager.Instance().setSpeakerOn(applicaton.mEngine, CallManager.Instance().isSpeakerOn());
         }
     }
 
